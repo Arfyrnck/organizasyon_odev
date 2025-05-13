@@ -627,6 +627,22 @@
       background: var(--primary-color);
       color: #000;
     }
+
+    .password-cracking-animation {
+      margin: 10px 0;
+      font-family: 'Fira Code', monospace;
+    }
+    
+    .password-attempt {
+      color: var(--text-color);
+      margin: 2px 0;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .password-attempt:last-child {
+      color: var(--success-color);
+      font-weight: bold;
+    }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -729,20 +745,21 @@ document.addEventListener("DOMContentLoaded", function () {
     {
       soru: ">> GÖREV #3: SSH üzerinden hedef cihazda oturum açmak için doğru Hydra komutunu gir.\n>> Komut: hydra -l ______ -P ______ /usr/share/wordlists/deneneceksifreler.txt ssh://_____",
       cevap: "hydra -l t.timucin -P /usr/share/wordlists/deneneceksifreler.txt ssh://10.16.0.88",
-      yanıt: "Parola bulundu: 123456  [✔]"
+      yanıt: "Parola bulundu: Tunahan.123  [✔]",
+      showPasswordCracking: true
     },
     {
       soru: ">> GÖREV #4: Hedef cihazda SSH ile oturum açmak için sshpass kullanarak tek komutta bağlanın.\n>> Komut: ______",
-      cevap: "sshpass -p 123456 ssh t.timucin@10.16.0.88",
+      cevap: "sshpass -p Tunahan.123 ssh t.timucin@10.16.0.88",
       yanıt: "SSH bağlantısı kuruldu.  [✔]"
     },
     {
       soru: ">> GÖREV #5: Hedef cihazda sınav notları dosyasını bulmak için doğru locate komutunu gir.\n>> Komut: locate ______",
-      cevap: "locate exam_notes.txt",
+      cevap: "locate organizasyonvize.txt",
       yanıt: "Dosya bulundu: /home/t.timucin/Documents/organizasyon_vize.txt  [✔]"
     },
     {
-      soru: ">> GÖREV #6: exam_notes.txt dosyasını terminal editörüyle açın, 6 öğrencinin notlarını güncelleyin, kaydedip çıkın.",
+      soru: ">> GÖREV #6: organizasyonvize.txt dosyasını terminal editörüyle açın, 6 öğrencinin notlarını güncelleyin, kaydedip çıkın.",
       cevap: "nano /home/t.timucin/Documents/organizasyon_vize.txt",
       yanıt: "Editör açıldı; notlar güncellendi ve dosya kaydedilip kapatıldı.  [✔]",
       editorContent: `# Organizasyon Vize Notları
@@ -799,9 +816,9 @@ document.addEventListener("DOMContentLoaded", function () {
       editorMode: true
     },
     {
-      soru: ">> GÖREV #7: Hedef cihazdan güvenli bir şekilde çıkış yapmak için doğru komutu gir.\n>> Komut: ______",
-      cevap: "exit",
-      yanıt: "SSH oturumu kapatıldı, yerel makineye dönüldü.  [✔]"
+      soru: ">> GÖREV #7: Hedef cihazdaki sadece t.timucin oturum kayıtlarını log dosyalarından silmek için doğru komutu gir.\n>> Komut: ______",
+      cevap: "sed -i '/t\\.timucin/d' /var/log/auth.log /var/log/secure",
+      yanıt: "Yalnızca ‘t.timucin’ kayıtları silindi; diğer loglar dokunulmadı.  [✔]"
     }
   ];
 
@@ -1268,6 +1285,89 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Parola kırma animasyonu için yeni fonksiyon
+  function showPasswordCrackingAnimation() {
+    const passwords = [
+      "TunahanTimucin",
+      "TimucinTunahan",
+      "Tunahan1234",
+      "Timucin1234",
+      "TTimucin!",
+      "Timuçin!",
+      "Tunahan!",
+      "Tunahan_07",
+      "Timucin_07",
+      "Tunahan0712",
+      "Timucin0712",
+      "TunahanDÜ",
+      "TimuçinDÜ",
+      "DÜTunahan",
+      "DÜTimucin",
+      "TunahanDU07",
+      "TimucinDU07",
+      "TunahanPass",
+      "PassTunahan",
+      "TunahanPwd",
+      "TimucinPwd",
+      "TunahanSifre",
+      "TimucinSifre",
+      "TunahanSifre07",
+      "TimucinSifre07",
+      "TunahanTT07",
+      "TT07!",
+      "TimuDÜ07",
+      "Tunahan07!",
+      "TTimucin1905",
+      "Timuçin1905",
+      "Tunahan1905!",
+      "Timucin1905!",
+      "TunahanGüvenlik",
+      "TimucinGüvenlik",
+      "TunahanAdmin",
+      "TimucinAdmin",
+      "TunahanRoot",
+      "TimucinRoot",
+      "Tunahan.123"
+    ];
+
+    const animationDiv = document.createElement('div');
+    animationDiv.className = 'password-cracking-animation';
+    terminal.appendChild(animationDiv);
+
+    let currentIndex = 0;
+    const interval = setInterval(() => {
+      if (currentIndex < passwords.length) {
+        const attemptDiv = document.createElement('div');
+        attemptDiv.className = 'password-attempt';
+        attemptDiv.innerHTML = `Deneniyor: ${passwords[currentIndex]}`;
+        animationDiv.appendChild(attemptDiv);
+        terminal.scrollTop = terminal.scrollHeight;
+        currentIndex++;
+      } else {
+        clearInterval(interval);
+        const successDiv = document.createElement('div');
+        successDiv.className = 'success-text';
+        successDiv.innerHTML = 'Parola bulundu: Tunahan.123  [✔]';
+        animationDiv.appendChild(successDiv);
+        
+        const learnDiv = document.createElement('div');
+        learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
+        learnDiv.className = 'warning-text';
+        animationDiv.appendChild(learnDiv);
+        
+        görevIndex++;
+        updateTaskStatus();
+        
+        if (görevIndex < görevler.length) {
+          const nextTaskDiv = document.createElement('div');
+          nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+          nextTaskDiv.className = 'task-container';
+          terminal.appendChild(nextTaskDiv);
+        }
+      }
+    }, 200);
+  }
+
   input.addEventListener("keydown", (e) => {
     if (isEditorMode) {
       handleEditorKeyPress(e);
@@ -1276,7 +1376,6 @@ document.addEventListener("DOMContentLoaded", function () {
     if (e.key === "Enter") {
       const komut = input.value.trim().toLowerCase().replace(/[üu]/g, 'u').replace(/[ıi]/g, 'i');
       
-      // Komut girişini komut satırının altına ekle
       const commandDiv = document.createElement('div');
       commandDiv.innerHTML = `> ${komut}`;
       commandDiv.className = 'terminal-text normal-text';
@@ -1288,7 +1387,9 @@ document.addEventListener("DOMContentLoaded", function () {
       const aktifGörev = görevler[görevIndex];
 
       if (aktifGörev && komut === aktifGörev.cevap.toLowerCase()) {
-        if (aktifGörev.editorMode) {
+        if (aktifGörev.showPasswordCracking) {
+          showPasswordCrackingAnimation();
+        } else if (aktifGörev.editorMode) {
           showNanoEditor(aktifGörev.editorContent);
         } else {
           const successDiv = document.createElement('div');
@@ -1308,19 +1409,6 @@ document.addEventListener("DOMContentLoaded", function () {
             nextTaskDiv.innerHTML = görevler[görevIndex].soru;
             nextTaskDiv.className = 'task-container';
             terminal.appendChild(nextTaskDiv);
-
-            if (görevIndex === 3) {
-              hızKatı = 2;
-              const warningDiv = document.createElement('div');
-              warningDiv.innerHTML = '>> Sistem güvenliği güçleniyor! Zaman iki kat hızlanıyor! ⏱';
-              warningDiv.className = 'warning-text';
-              terminal.appendChild(warningDiv);
-            }
-          } else {
-            const completeDiv = document.createElement('div');
-            completeDiv.innerHTML = '>> Tüm görevler başarıyla tamamlandı. Sistem kontrolü sağlanıyor...<br>> [exit] yazarsan sistemden çıkış yapılır.';
-            completeDiv.className = 'success-text';
-            terminal.appendChild(completeDiv);
           }
           updateTaskStatus();
         }
